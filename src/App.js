@@ -64,22 +64,20 @@ function Board({xIsNext, squares, onPlay}) {
 }
 
 export default function Game(){
-  const [xIsNext, setXIsNext] = useState(true);
   const [history, setHistory] = useState([Array(9).fill(null)]); //inicijalno ima jedno prazno polje od 9 elemenata
   const [currentMove, setCurrentMove] = useState(0);
+  const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove]; //za rendering se dohvaća trenutni potez
 
   //poziva ju Board komponenta kako bi se ažurirala igra
   function handlePlay(nextSquares){
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
-    setHistory([...history, nextSquares]);
+    setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
-    setXIsNext(!xIsNext);
   }
 
   function jumpTo(nextMove){
     setCurrentMove(nextMove);
-    setXIsNext(nextMove % 2 === 0); //ako je redni broj poteza paran, onda je na redu X
   }
 
   const moves = history.map((squares, move) => {
