@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-function Square({value, onSquareClick}) {
+function Square({ value, onSquareClick }) {
   return (
     <button className="square" onClick={onSquareClick}>
       {value}
@@ -8,96 +8,106 @@ function Square({value, onSquareClick}) {
   );
 }
 
-function Board({xIsNext, squares, onPlay}) {
-  /* const [xIsNext, setXIsNext] = useState(true);
-  const [squares, setSquares] = useState(Array(9).fill(null));
- */
-  function handleClick(i){
-    if(squares[i] || calculateWinner(squares)){
-      return;
-    }
-
-    const nextSquares = squares.slice();
-    if(xIsNext){
-      nextSquares[i] = "X";
-    }else {
-      nextSquares[i] = "O";
-    }
-    
-    /* setSquares(nextSquares);
-    setXIsNext(!xIsNext); */
-
-    onPlay(nextSquares);
-
-    console.log(squares);
-  }
-
+function Board({ squares, onSquareClick }) {
   const winner = calculateWinner(squares);
   let status;
-  if(winner){
+  if (winner) {
     status = "Winner: " + winner;
-  }else{
-    status = "Next player: " + (xIsNext ? "X" : "O");
+  } else {
+    status = "Next player: " + (squares.filter(Boolean).length % 2 === 0 ? "X" : "O");
   }
 
   return (
     <>
       <div className="status">{status}</div>
-
       <div className="board-row">
-        <Square value={squares[0]} onSquareClick={() => handleClick(0)}/>
-        <Square value={squares[1]} onSquareClick={() => handleClick(1)}/>
-        <Square value={squares[2]} onSquareClick={() => handleClick(2)}/>
+        <Square value={squares[0]} onSquareClick={() => onSquareClick(0)} />
+        <Square value={squares[1]} onSquareClick={() => onSquareClick(1)} />
+        <Square value={squares[2]} onSquareClick={() => onSquareClick(2)} />
       </div>
       <div className="board-row">
-        <Square value={squares[3]} onSquareClick={() => handleClick(3)}/>
-        <Square value={squares[4]} onSquareClick={() => handleClick(4)}/>
-        <Square value={squares[5]} onSquareClick={() => handleClick(5)}/>
+        <Square value={squares[3]} onSquareClick={() => onSquareClick(3)} />
+        <Square value={squares[4]} onSquareClick={() => onSquareClick(4)} />
+        <Square value={squares[5]} onSquareClick={() => onSquareClick(5)} />
       </div>
       <div className="board-row">
-        <Square value={squares[6]} onSquareClick={() => handleClick(6)}/>
-        <Square value={squares[7]} onSquareClick={() => handleClick(7)}/>
-        <Square value={squares[8]} onSquareClick={() => handleClick(8)}/>
+        <Square value={squares[6]} onSquareClick={() => onSquareClick(6)} />
+        <Square value={squares[7]} onSquareClick={() => onSquareClick(7)} />
+        <Square value={squares[8]} onSquareClick={() => onSquareClick(8)} />
       </div>
     </>
   );
 }
 
-export default function Game(){
-  const [history, setHistory] = useState([Array(9).fill(null)]); //inicijalno ima jedno prazno polje od 9 elemenata
+export default function Game() {
+  const [history, setHistory] = useState([Array(9).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
+  const currentSquares = history[currentMove];
   const xIsNext = currentMove % 2 === 0;
-  const currentSquares = history[currentMove]; //za rendering se dohvaća trenutni potez
 
-  //poziva ju Board komponenta kako bi se ažurirala igra
-  function handlePlay(nextSquares){
+  function handlePlay(nextSquares) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
   }
 
-  function jumpTo(nextMove){
+  function jumpTo(nextMove) {
     setCurrentMove(nextMove);
   }
 
-  const moves = history.map(([], move) => {
+  function makeComputerMove() {
+    const emptySquares = currentSquares
+      .map((square, index) => (square === null ? index : null))
+      .filter((index) => index !== null);
+
+    if (emptySquares.length === 0 || calculateWinner(currentSquares)) {
+      return; // Game over or no moves left
+    }
+
+    const randomIndex =
+      emptySquares[Math.floor(Math.random() * emptySquares.length)];
+
+    const nextSquares = currentSquares.slice();
+    nextSquares[randomIndex] = "O";
+    handlePlay(nextSquares);
+  }
+
+  // Use useEffect to handle the computer move after the player's move
+  useEffect(() => {
+    if (!xIsNext) {
+      const timer = setTimeout(() => {
+        makeComputerMove();
+      }, 500);
+
+      return () => clearTimeout(timer); // Cleanup timeout on unmount or re-render
+    }
+  }, [xIsNext, currentSquares]); // Dependencies: run when xIsNext or currentSquares change
+
+  const moves = history.map((_, move) => {
     let description;
-    if(move > 0){
+    if (move > 0) {
       description = "Go to move #" + move;
-    } else{
+    } else {
       description = "Go to game start";
     }
-    return(
+    return (
       <li key={move}>
-        <button onClick={() => jumpTo(move)}> {description} </button>
+        <button onClick={() => jumpTo(move)}>{description}</button>
       </li>
     );
-  })
+  });
 
   return (
     <div className="game">
       <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay}/>
+        <Board squares={currentSquares} onSquareClick={(i) => {
+          if (currentSquares[i] || calculateWinner(currentSquares) || !xIsNext) {
+            return; // Ignore click if square is filled, there's a winner, or it's not X's turn
+          }
+          const nextSquares = currentSquares.slice();
+          nextSquares[i] = "X";
+          handlePlay(nextSquares);
+        }} />
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -106,7 +116,7 @@ export default function Game(){
   );
 }
 
-function calculateWinner(squares){
+function calculateWinner(squares) {
   const lines = [
     [0, 1, 2],
     [3, 4, 5],
@@ -115,12 +125,12 @@ function calculateWinner(squares){
     [1, 4, 7],
     [2, 5, 8],
     [0, 4, 8],
-    [6, 4, 2]
+    [6, 4, 2],
   ];
 
-  for (let i = 0; i < lines.length; i++){
+  for (let i = 0; i < lines.length; i++) {
     const [a, b, c] = lines[i];
-    if(squares[a] && squares[a] === squares[b] && squares[a] === squares[c]){
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
       return squares[a];
     }
   }
