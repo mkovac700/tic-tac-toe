@@ -42,6 +42,7 @@ function Board({ squares, onSquareClick }) {
 export default function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
+  const [isLatestMove, setIsLatestMove] = useState(true);  // New flag
   const currentSquares = history[currentMove];
   const xIsNext = currentMove % 2 === 0;
 
@@ -49,10 +50,12 @@ export default function Game() {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
+    setIsLatestMove(true);  // Reset to latest move
   }
 
   function jumpTo(nextMove) {
     setCurrentMove(nextMove);
+    setIsLatestMove(nextMove === history.length - 1);  // Check if this is the latest move
   }
 
   function makeComputerMove() {
@@ -74,14 +77,14 @@ export default function Game() {
 
   // Use useEffect to handle the computer move after the player's move
   useEffect(() => {
-    if (!xIsNext) {
+    if (isLatestMove && !xIsNext) {
       const timer = setTimeout(() => {
         makeComputerMove();
       }, 500);
 
       return () => clearTimeout(timer); // Cleanup timeout on unmount or re-render
     }
-  }, [xIsNext, currentSquares]); // Dependencies: run when xIsNext or currentSquares change
+  }, [xIsNext, currentSquares, isLatestMove]); // Dependencies: run when xIsNext, currentSquares, or isLatestMove change
 
   const moves = history.map((_, move) => {
     let description;
@@ -101,8 +104,8 @@ export default function Game() {
     <div className="game">
       <div className="game-board">
         <Board squares={currentSquares} onSquareClick={(i) => {
-          if (currentSquares[i] || calculateWinner(currentSquares) || !xIsNext) {
-            return; // Ignore click if square is filled, there's a winner, or it's not X's turn
+          if (currentSquares[i] || calculateWinner(currentSquares) || !xIsNext || !isLatestMove) {
+            return; // Ignore click if square is filled, there's a winner, it's not X's turn, or we're not on the latest move
           }
           const nextSquares = currentSquares.slice();
           nextSquares[i] = "X";
