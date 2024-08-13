@@ -75,12 +75,20 @@ export default function Game() {
     handlePlay(nextSquares);
   }
 
+  function generateRandomTime(minMs, maxMs){
+	const minCeiled = Math.ceil(minMs);
+  	const maxFloored = Math.floor(maxMs);
+  	return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled); 
+  }
+
   // Use useEffect to handle the computer move after the player's move
   useEffect(() => {
+	let ms = generateRandomTime(500,2000);
+
     if (isLatestMove && !xIsNext) {
       const timer = setTimeout(() => {
         makeComputerMove();
-      }, 500);
+      }, ms);
 
       return () => clearTimeout(timer); // Cleanup timeout on unmount or re-render
     }
