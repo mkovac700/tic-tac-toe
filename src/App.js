@@ -8,13 +8,15 @@ function Square({ value, onSquareClick }) {
   );
 }
 
-function Board({ squares, onSquareClick }) {
-  const winner = calculateWinner(squares);
+function Board({ squares, onSquareClick, winner }) {
+  /* const winner = calculateWinner(squares);
+  console.log("winner: ", winner); */
   let status;
   if (winner) {
     status = "Winner: " + winner;
   } else {
-    status = "Next player: " + (squares.filter(Boolean).length % 2 === 0 ? "X" : "O");
+    status =
+      "Next player: " + (squares.filter(Boolean).length % 2 === 0 ? "X" : "O");
   }
 
   return (
@@ -42,20 +44,31 @@ function Board({ squares, onSquareClick }) {
 export default function Game() {
   const [history, setHistory] = useState([Array(9).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
-  const [isLatestMove, setIsLatestMove] = useState(true);  // New flag
+  const [isLatestMove, setIsLatestMove] = useState(true); // New flag
   const currentSquares = history[currentMove];
   const xIsNext = currentMove % 2 === 0;
+  const [winner, setWinner] = useState(null);
+
+  useEffect(() => {
+    async function checkWinner(){
+      let winner = await calculateWinner(currentSquares);
+      setWinner(winner);
+    }
+
+    checkWinner();
+  }, [currentSquares]);
 
   function handlePlay(nextSquares) {
     const nextHistory = [...history.slice(0, currentMove + 1), nextSquares];
     setHistory(nextHistory);
     setCurrentMove(nextHistory.length - 1);
-    setIsLatestMove(true);  // Reset to latest move
+    setIsLatestMove(true); // Reset to latest move
+    //console.log(nextSquares);
   }
 
   function jumpTo(nextMove) {
     setCurrentMove(nextMove);
-    setIsLatestMove(nextMove === history.length - 1);  // Check if this is the latest move
+    setIsLatestMove(nextMove === history.length - 1); // Check if this is the latest move
   }
 
   function makeComputerMove() {
@@ -63,7 +76,7 @@ export default function Game() {
       .map((square, index) => (square === null ? index : null))
       .filter((index) => index !== null);
 
-    if (emptySquares.length === 0 || calculateWinner(currentSquares)) {
+    if (emptySquares.length === 0 || winner) {
       return; // Game over or no moves left
     }
 
@@ -75,15 +88,15 @@ export default function Game() {
     handlePlay(nextSquares);
   }
 
-  function generateRandomTime(minMs, maxMs){
-	const minCeiled = Math.ceil(minMs);
-  	const maxFloored = Math.floor(maxMs);
-  	return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled); 
+  function generateRandomTime(minMs, maxMs) {
+    const minCeiled = Math.ceil(minMs);
+    const maxFloored = Math.floor(maxMs);
+    return Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);
   }
 
   // Use useEffect to handle the computer move after the player's move
   useEffect(() => {
-	let ms = generateRandomTime(500,2000);
+    let ms = generateRandomTime(500, 2000);
 
     if (isLatestMove && !xIsNext) {
       const timer = setTimeout(() => {
@@ -92,7 +105,7 @@ export default function Game() {
 
       return () => clearTimeout(timer); // Cleanup timeout on unmount or re-render
     }
-  }, [xIsNext, currentSquares, isLatestMove]); // Dependencies: run when xIsNext, currentSquares, or isLatestMove change
+  }, [xIsNext, currentSquares, isLatestMove, winner]); // Dependencies: run when xIsNext, currentSquares, or isLatestMove change
 
   const moves = history.map((_, move) => {
     let description;
@@ -111,14 +124,24 @@ export default function Game() {
   return (
     <div className="game">
       <div className="game-board">
-        <Board squares={currentSquares} onSquareClick={(i) => {
-          if (currentSquares[i] || calculateWinner(currentSquares) || !xIsNext || !isLatestMove) {
-            return; // Ignore click if square is filled, there's a winner, it's not X's turn, or we're not on the latest move
-          }
-          const nextSquares = currentSquares.slice();
-          nextSquares[i] = "X";
-          handlePlay(nextSquares);
-        }} />
+        <Board
+          squares={currentSquares}
+          winner={winner}
+          onSquareClick={(i) => {
+            if (
+              currentSquares[i] ||
+              winner ||
+              !xIsNext ||
+              !isLatestMove
+            ) {
+              return; // Ignore click if square is filled, there's a winner, it's not X's turn, or we're not on the latest move
+            }
+            const nextSquares = currentSquares.slice();
+            nextSquares[i] = "X";
+            handlePlay(nextSquares);
+            
+          }}
+        />
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -127,24 +150,24 @@ export default function Game() {
   );
 }
 
-function calculateWinner(squares) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [6, 4, 2],
-  ];
+async function calculateWinner(squares) {
 
-  for (let i = 0; i < lines.length; i++) {
-    const [a, b, c] = lines[i];
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
-    }
+  try {
+    const response = await fetch("http://localhost:8080/api/demo/calculateWinner", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(squares),
+    })
+      
+    if(!response.ok) throw new Error(response.status);
+
+    const data = await response.json();
+    return data[0];
+
+  } catch (error) {
+    console.log("error: ", error);
+    return null;
   }
-
-  return null;
 }
