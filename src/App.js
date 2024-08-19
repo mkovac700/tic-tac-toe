@@ -153,7 +153,7 @@ export default function Game() {
 async function calculateWinner(squares) {
 
   try {
-    const response = await fetch("http://localhost:8080/api/demo/calculateWinner", {
+    const response = await fetch("http://localhost:8080/api/game/calculateWinner", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
