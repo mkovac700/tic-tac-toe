@@ -1,15 +1,24 @@
 package com.tictactoe.backend.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.tictactoe.backend.entity.Game;
+import com.tictactoe.backend.service.GameService;
+
 @RestController
 @RequestMapping("/api/game")
 public class GameController {
+	
+	@Autowired
+	private GameService gameService;
+	
 	@PostMapping("/calculateWinner")
 	public String [] calculateWinner(@RequestBody List<String> squares) {
 		System.out.println("received array: " + squares);
@@ -32,8 +41,13 @@ public class GameController {
 			int c = currentLine[2];
 			
 			if(squares.get(a) != null && squares.get(a).equals(squares.get(b)) && squares.get(a).equals(squares.get(c))) {
-				System.out.println("result: " + squares.get(a));
-				return new String [] {squares.get(a)};	
+				String winner = squares.get(a);
+				
+				System.out.println("winner: " + winner);
+				
+				gameService.saveGame(new Game(LocalDateTime.now(), winner));
+				
+				return new String [] { winner};	
 			}
 		}
 		
