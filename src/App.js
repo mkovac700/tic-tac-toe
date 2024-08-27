@@ -48,11 +48,19 @@ export default function Game() {
   const currentSquares = history[currentMove];
   const xIsNext = currentMove % 2 === 0;
   const [winner, setWinner] = useState(null);
+  const [winnersList, setWinnersList] = useState([]);
+  const [winnersCount, setWinnersCount] = useState(0);
 
   useEffect(() => {
-    async function checkWinner(){
+    async function checkWinner() {
       let winner = await calculateWinner(currentSquares);
       setWinner(winner);
+
+      if (winner) {
+        let data = await fetchWinnersList();
+        setWinnersList(data.games);
+        setWinnersCount(data.count);
+      }
     }
 
     checkWinner();
@@ -122,52 +130,103 @@ export default function Game() {
   });
 
   return (
-    <div className="game">
-      <div className="game-board">
-        <Board
-          squares={currentSquares}
-          winner={winner}
-          onSquareClick={(i) => {
-            if (
-              currentSquares[i] ||
-              winner ||
-              !xIsNext ||
-              !isLatestMove
-            ) {
-              return; // Ignore click if square is filled, there's a winner, it's not X's turn, or we're not on the latest move
-            }
-            const nextSquares = currentSquares.slice();
-            nextSquares[i] = "X";
-            handlePlay(nextSquares);
-            
-          }}
-        />
+    <>
+      <div className="game">
+        <div className="game-board">
+          <Board
+            squares={currentSquares}
+            winner={winner}
+            onSquareClick={(i) => {
+              if (currentSquares[i] || winner || !xIsNext || !isLatestMove) {
+                return; // Ignore click if square is filled, there's a winner, it's not X's turn, or we're not on the latest move
+              }
+              const nextSquares = currentSquares.slice();
+              nextSquares[i] = "X";
+              handlePlay(nextSquares);
+            }}
+          />
+        </div>
+        <div className="game-info">
+          <ol>{moves}</ol>
+        </div>
       </div>
-      <div className="game-info">
-        <ol>{moves}</ol>
+      <br></br>
+      <div className="winners-table">
+        <h3> Winner list </h3>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Player</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {winnersList.map((w, gameid) => (
+              <tr key={gameid}>
+                <td>{w.id}</td>
+                <td>{w.winner}</td>
+                <td>{formatTimestamp(w.timestamp)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </>
   );
 }
 
 async function calculateWinner(squares) {
-
   try {
-    const response = await fetch("http://localhost:8080/api/game/calculateWinner", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(squares),
-    })
-      
-    if(!response.ok) throw new Error(response.status);
+    const response = await fetch(
+      "http://localhost:8080/api/game/calculateWinner",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(squares),
+      }
+    );
+
+    if (!response.ok) throw new Error(response.status);
 
     const data = await response.json();
     return data[0];
-
   } catch (error) {
     console.log("error: ", error);
     return null;
   }
+}
+
+async function fetchWinnersList() {
+  try {
+    const response = await fetch("http://localhost:8080/api/game/all");
+
+    if (!response.ok) throw new Error(response.status);
+
+    const data = await response.json();
+
+    console.log(data);
+    console.log(data.games);
+    console.log(data.count);
+
+    return data;
+  } catch (error) {
+    console.log("error: ", error);
+    return null;
+  }
+}
+
+function formatTimestamp(timestamp){
+  const date = new Date(timestamp);
+
+  return date.toLocaleDateString("hr-HR", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second:"2-digit"
+  });
 }
