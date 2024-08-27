@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.tictactoe.backend.entity.Game;
+import com.tictactoe.backend.entity.GameResponse;
 import com.tictactoe.backend.repository.GameRepository;
 
 @Service
@@ -20,8 +21,11 @@ public class GameServiceImpl implements GameService{
 	}
 
 	@Override
-	public List<Game> fetchAllGames() {
-		return (List<Game>) gameRepository.findAll();
+	public GameResponse fetchAllGames() {
+		List<Game> games = (List<Game>) gameRepository.findAll();
+		int count = games.size();
+		 
+		return new GameResponse(games, count);
 	}
 	
 }
